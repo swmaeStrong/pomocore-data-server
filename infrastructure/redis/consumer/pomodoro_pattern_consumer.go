@@ -278,13 +278,8 @@ func (c *PomodoroPatternConsumer) processBatchMessages(messages []redis.XMessage
 			log.Printf("Classification failed for app=%s, title=%s, url=%s, using default category",
 				pomodoroMsg.App, pomodoroMsg.Title, pomodoroMsg.URL)
 		}
+		leaderboardEntry := domain.NewLeaderboardEntry(pomodoroMsg.UserID, category, pomodoroMsg.Duration, pomodoroMsg.Timestamp)
 
-		leaderboardEntry := &domain.LeaderboardEntry{
-			UserID:    pomodoroMsg.UserID,
-			Category:  category,
-			Duration:  pomodoroMsg.Duration,
-			Timestamp: pomodoroMsg.Timestamp,
-		}
 		leaderboardUpdates[i] = leaderboardEntry
 
 		categoryID := c.categoryToIdMap[category]
