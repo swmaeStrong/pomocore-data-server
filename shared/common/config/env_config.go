@@ -9,8 +9,8 @@ import (
 )
 
 func LoadEnv() {
-	if err := godotenv.Load("../../.gitignore"); err != nil {
-		log.Printf("Warning: .gitignore file not found or could not be loaded: %v", err)
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("Warning: .env file not found or could not be loaded: %v", err)
 	}
 }
 
