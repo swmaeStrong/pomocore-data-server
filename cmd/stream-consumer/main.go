@@ -6,13 +6,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	categoryPatternService "pomocore-data/domains/categoryPattern/application/service"
 	"pomocore-data/domains/patternClassifier/domain/core"
+	pomodoroService "pomocore-data/domains/pomodoro/application/service"
 	mongoAdapter "pomocore-data/infrastructure/mongoDB/adapter"
 	mongoConfig "pomocore-data/infrastructure/mongoDB/config"
 	"pomocore-data/infrastructure/mongoDB/model"
 	redisAdapter "pomocore-data/infrastructure/redis/adapter"
+	redisConfig "pomocore-data/infrastructure/redis/config"
 	"pomocore-data/infrastructure/redis/consumer"
 	envConfig "pomocore-data/shared/common/config"
 
@@ -64,9 +67,8 @@ func main() {
 	// Create services
 	categoryPatternUseCase := categoryPatternService.NewCategoryPatternService(categoryPatternRepo)
 
-	// Create consumers
-	pomodoroConsumer := consumer.NewPomodoroPatternConsumer(
-		redisClient,
+	// Create use case
+	classifyUseCase := pomodoroService.NewPomodoroClassificationService(
 		classifierAdapter,
 		categorizedDataRepo,
 		pomodoroUsageLogRepo,
@@ -74,30 +76,39 @@ func main() {
 		leaderboardCache,
 	)
 
-	// Leaderboard consumer is now optional since we update directly
-	// leaderboardConsumer := consumer.NewLeaderboardConsumer(
-	// 	redisClient,
-	// 	leaderboardService,
-	// )
+	// Create message processor adapter
+	messageProcessor := redisAdapter.NewPomodoroMessageProcessorAdapter(
+		classifyUseCase,
+		redisClient,
+	)
 
-	// Start consumers
+	// Configure stream
+	streamConfig := consumer.StreamConfig{
+		StreamKey: redisConfig.PomodoroPatternMatch.StreamKey,
+		Group:     redisConfig.PomodoroPatternMatch.Group,
+		Consumer:  redisConfig.PomodoroPatternMatch.Consumer,
+	}
+
+	// Create abstract consumer with the processor
+	pomodoroConsumer := consumer.NewAbstractConsumer(
+		redisClient,
+		streamConfig,
+		messageProcessor,
+		10,            // workerPool
+		50,            // batchSize
+		2*time.Second, // blockTime
+	)
+
 	if err := pomodoroConsumer.Start(); err != nil {
 		log.Fatalf("Failed to start pomodoro consumer: %v", err)
 	}
 
-	// Leaderboard consumer is no longer needed
-	// if err := leaderboardConsumer.Start(); err != nil {
-	// 	log.Fatalf("Failed to start leaderboard consumer: %v", err)
-	// }
-
-	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
 	log.Println("Shutting down...")
 	pomodoroConsumer.Stop()
-	// leaderboardConsumer.Stop()
 	log.Println("Shutdown complete")
 }
 

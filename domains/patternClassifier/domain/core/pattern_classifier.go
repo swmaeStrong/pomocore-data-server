@@ -60,7 +60,6 @@ func (p *PatternClassifier) Classify(app, title, url string) (string, bool) {
 	}
 	app = strings.ToLower(app)
 
-	//TODO: 소문자 처리
 	var category string
 
 	if category = p.classifyFromApp(app); category != "" {
