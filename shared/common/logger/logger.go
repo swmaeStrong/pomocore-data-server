@@ -21,20 +21,20 @@ func InitLogger(serviceName, environment string) error {
 	config.EncoderConfig.StacktraceKey = "stacktrace"
 
 	// 개발 환경에서는 콘솔 포맷 사용
-	if environment == "development" {
+	if environment == "prod" {
+		config.Encoding = "json"
+		config.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+	} else {
 		config.Encoding = "console"
 		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	} else {
-		config.Encoding = "json"
-		config.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	}
 
 	// 로그 레벨 설정
-	if environment == "development" {
-		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	} else {
+	if environment == "prod" {
 		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	} else {
+		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	}
 
 	// 서비스 정보를 초기 필드로 추가
