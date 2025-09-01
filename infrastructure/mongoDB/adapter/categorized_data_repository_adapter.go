@@ -6,9 +6,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 	pomodoroPort "pomocore-data/domains/pomodoro/application/port"
 	"pomocore-data/infrastructure/mongoDB/model"
+	"pomocore-data/shared/common/logger"
+
+	"go.uber.org/zap"
 )
 
 type CategorizedDataRepositoryAdapter struct {
@@ -66,7 +68,7 @@ func (a *CategorizedDataRepositoryAdapter) UpdateCategoryID(ctx context.Context,
 	}
 
 	if result.MatchedCount == 0 {
-		log.Printf("No document found with id: %s", id.Hex())
+		logger.Debug("No document found with id", zap.String("id", id.Hex()))
 	}
 
 	return nil
@@ -153,7 +155,9 @@ func (a *CategorizedDataRepositoryAdapter) UpdateCategoryIDsBatch(ctx context.Co
 	for categorizedDataIDStr, categoryID := range categorizedDataToCategoryIDMap {
 		categorizedDataID, err := primitive.ObjectIDFromHex(categorizedDataIDStr)
 		if err != nil {
-			log.Printf("Invalid ObjectID format: %s, error: %v", categorizedDataIDStr, err)
+			logger.Warn("Invalid ObjectID format",
+				zap.String("categorized_data_id", categorizedDataIDStr),
+				logger.WithError(err))
 			continue
 		}
 
@@ -175,6 +179,7 @@ func (a *CategorizedDataRepositoryAdapter) UpdateCategoryIDsBatch(ctx context.Co
 		return err
 	}
 
-	log.Printf("Updated %d categorized data with category IDs", result.ModifiedCount)
+	logger.Debug("Updated categorized data with category IDs",
+		zap.Int64("modified_count", result.ModifiedCount))
 	return nil
 }
