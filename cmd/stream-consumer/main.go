@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,19 +17,27 @@ import (
 	redisConfig "pomocore-data/infrastructure/redis/config"
 	"pomocore-data/infrastructure/redis/consumer"
 	envConfig "pomocore-data/shared/common/config"
+	"pomocore-data/shared/common/logger"
 
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 )
 
 func main() {
 	envConfig.LoadEnv()
 
+	// Initialize logger
+	if err := logger.InitFromEnv("pomocore-data"); err != nil {
+		panic("Failed to initialize logger: " + err.Error())
+	}
+	defer logger.Sync()
+
 	// Initialize MongoDB
 	mongoClient, err := mongoConfig.ConnectMongoDB()
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		logger.Fatal("Failed to connect to MongoDB", logger.WithError(err))
 	}
 	defer mongoClient.Disconnect(context.Background())
 
@@ -46,13 +53,13 @@ func main() {
 
 	// Test Redis connection
 	if err := redisClient.Ping(context.Background()).Err(); err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		logger.Fatal("Failed to connect to Redis", logger.WithError(err))
 	}
 
 	// Initialize Pattern Classifier
 	patternClassifier := core.NewPatternClassifier()
 	if err := initializePatternClassifier(patternClassifier, db); err != nil {
-		log.Fatalf("Failed to initialize pattern classifier: %v", err)
+		logger.Fatal("Failed to initialize pattern classifier", logger.WithError(err))
 	}
 
 	// Create MongoDB adapters
@@ -100,16 +107,16 @@ func main() {
 	)
 
 	if err := pomodoroConsumer.Start(); err != nil {
-		log.Fatalf("Failed to start pomodoro consumer: %v", err)
+		logger.Fatal("Failed to start pomodoro consumer", logger.WithError(err))
 	}
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
 
-	log.Println("Shutting down...")
+	logger.Info("Shutting down...")
 	pomodoroConsumer.Stop()
-	log.Println("Shutdown complete")
+	logger.Info("Shutdown complete")
 }
 
 func initializePatternClassifier(classifier *core.PatternClassifier, db *mongo.Database) error {
@@ -127,6 +134,6 @@ func initializePatternClassifier(classifier *core.PatternClassifier, db *mongo.D
 	}
 
 	classifier.Initialize(patterns)
-	log.Printf("Pattern classifier initialized with %d patterns", len(patterns))
+	logger.Info("Pattern classifier initialized", zap.Int("pattern_count", len(patterns)))
 	return nil
 }

@@ -6,10 +6,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"log"
 	pomodoroPort "pomocore-data/domains/pomodoro/application/port"
 	"pomocore-data/infrastructure/mongoDB/model"
+	"pomocore-data/shared/common/logger"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type PomodoroUsageLogRepositoryAdapter struct {
@@ -67,7 +69,7 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategoryID(ctx context.Context
 	}
 
 	if result.MatchedCount == 0 {
-		log.Printf("No document found with id: %s", id.Hex())
+		logger.Debug("No document found with id", zap.String("id", id.Hex()))
 	}
 
 	return nil
@@ -83,7 +85,7 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategorizedDataID(ctx context.
 	}
 
 	if result.MatchedCount == 0 {
-		log.Printf("No document found with id: %s", id.Hex())
+		logger.Debug("No document found with id", zap.String("id", id.Hex()))
 	}
 
 	return nil
@@ -124,7 +126,9 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategorizedDataIDsBatch(ctx co
 	for usageLogIDStr, categorizedDataID := range usageLogToCategorizedDataMap {
 		usageLogID, err := primitive.ObjectIDFromHex(usageLogIDStr)
 		if err != nil {
-			log.Printf("Invalid ObjectID format: %s, error: %v", usageLogIDStr, err)
+			logger.Warn("Invalid ObjectID format",
+				zap.String("usage_log_id", usageLogIDStr),
+				logger.WithError(err))
 			continue
 		}
 
@@ -146,7 +150,8 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategorizedDataIDsBatch(ctx co
 		return err
 	}
 
-	log.Printf("Updated %d pomodoro usage logs with categorized data IDs", result.ModifiedCount)
+	logger.Debug("Updated pomodoro usage logs with categorized data IDs",
+		zap.Int64("modified_count", result.ModifiedCount))
 	return nil
 }
 
@@ -160,7 +165,9 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategoryIDsBatch(ctx context.C
 	for usageLogIDStr, categoryID := range usageLogToCategoryIDMap {
 		usageLogID, err := primitive.ObjectIDFromHex(usageLogIDStr)
 		if err != nil {
-			log.Printf("Invalid ObjectID format: %s, error: %v", usageLogIDStr, err)
+			logger.Warn("Invalid ObjectID format",
+				zap.String("usage_log_id", usageLogIDStr),
+				logger.WithError(err))
 			continue
 		}
 
@@ -182,6 +189,7 @@ func (a *PomodoroUsageLogRepositoryAdapter) UpdateCategoryIDsBatch(ctx context.C
 		return err
 	}
 
-	log.Printf("Updated %d pomodoro usage logs with category IDs", result.ModifiedCount)
+	logger.Debug("Updated pomodoro usage logs with category IDs",
+		zap.Int64("modified_count", result.ModifiedCount))
 	return nil
 }

@@ -3,11 +3,13 @@ package core
 import (
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"log"
 	"pomocore-data/domains/patternClassifier/domain/structure"
 	"pomocore-data/infrastructure/mongoDB/model"
+	"pomocore-data/shared/common/logger"
 	"strings"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type PatternClassifier struct {
@@ -56,7 +58,7 @@ func (p *PatternClassifier) initUrlAhoCorasick(patterns []model.CategoryPattern)
 
 func (p *PatternClassifier) Classify(app, title, url string) (string, bool) {
 	if !p.initialized {
-		log.Fatal("PatternClassifier not initialized")
+		logger.Fatal("PatternClassifier not initialized")
 	}
 	app = strings.ToLower(app)
 
@@ -113,18 +115,21 @@ func (p *PatternClassifier) classifyFromCache(query string) string {
 
 func (p *PatternClassifier) classifyFromLLM(app, title, url string) string {
 	if p.llmClient == nil {
-		log.Printf("LLM client is nil - OPENAI_API_KEY not set?")
+		logger.Warn("LLM client is nil - OPENAI_API_KEY not set?")
 		return ""
 	}
 
-	log.Printf("Calling LLM for classification: app=%s, title=%s, url=%s", app, title, url)
+	logger.Debug("Calling LLM for classification",
+		zap.String("app", app),
+		zap.String("title", title),
+		zap.String("url", url))
 	category, err := p.llmClient.ClassifyUsage(app, title, url)
 	if err != nil {
-		log.Printf("LLM classification failed: %v", err)
+		logger.Error("LLM classification failed", logger.WithError(err))
 		return ""
 	}
 
-	log.Printf("LLM returned category: %s", category)
+	logger.Debug("LLM returned category", zap.String("category", category))
 	return category
 }
 

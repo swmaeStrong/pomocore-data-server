@@ -2,8 +2,8 @@ package usecase
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"go.uber.org/zap"
+	"pomocore-data/shared/common/logger"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -53,9 +53,10 @@ func NewPomodoroClassificationService(
 	categoryIdToCategoryMap, err := categoryPatternUseCase.GetCategoryToIdMap(ctx)
 	if err != nil {
 		categoryIdToCategoryMap = make(map[string]primitive.ObjectID)
-		log.Printf("Warning: Failed to get category to ID map: %v", err)
+		logger.Warn("Failed to get category id to ID map",
+			zap.Error(err),
+		)
 	}
-	fmt.Println("Category To IdMap: ", categoryIdToCategoryMap)
 
 	return &PomodoroClassificationService{
 		patternClassifier:      patternClassifier,
@@ -92,8 +93,10 @@ func (s *PomodoroClassificationService) Execute(
 		category := result.Category
 		if category == "" {
 			category = "Uncategorized"
-			log.Printf("Classification failed for app=%s, title=%s, url=%s, using default category",
-				pomodoroMsg.App, pomodoroMsg.Title, pomodoroMsg.URL)
+			logger.Warn("Classification failed, using default category",
+				zap.String("app", pomodoroMsg.App),
+				zap.String("title", pomodoroMsg.Title),
+				zap.String("url", pomodoroMsg.URL))
 		}
 
 		// Create leaderboard entry
@@ -108,7 +111,7 @@ func (s *PomodoroClassificationService) Execute(
 		// Map category to ObjectID
 		categoryID := s.getCategoryID(category)
 		if categoryID.IsZero() {
-			log.Printf("No ObjectID found for category '%s', using zero ObjectID", category)
+			logger.Warn("No ObjectID found for category, using zero ObjectID", zap.String("category", category))
 		}
 		usageLogToCategoryIDMap[pomodoroMsg.PomodoroUsageLogID] = categoryID
 		categorizedDataToCategoryIDMap[pomodoroMsg.CategorizedDataID] = categoryID
@@ -125,18 +128,18 @@ func (s *PomodoroClassificationService) Execute(
 
 	// Update repositories
 	if err := s.pomodoroUsageLogRepo.UpdateCategoryIDsBatch(ctx, usageLogToCategoryIDMap); err != nil {
-		log.Printf("Error updating usageLog data: %v", err)
+		logger.Error("Error updating usageLog data", logger.WithError(err))
 		// Continue processing despite error
 	}
 
 	if err := s.categorizedDataRepo.UpdateCategoryIDsBatch(ctx, categorizedDataToCategoryIDMap); err != nil {
-		log.Printf("Error updating categorized data: %v", err)
+		logger.Error("Error updating categorized data", logger.WithError(err))
 		// Continue processing despite error
 	}
 
 	// Update leaderboard cache
 	if err := s.leaderboardCache.BatchIncreaseScore(ctx, leaderboardUpdates); err != nil {
-		log.Printf("Error increasing score: %v", err)
+		logger.Error("Error increasing score", logger.WithError(err))
 		// Continue processing despite error
 	}
 
@@ -197,6 +200,6 @@ func (s *PomodoroClassificationService) RefreshCategoryMapping(ctx context.Conte
 	s.categoryToIdMap = categoryIdToCategoryMap
 	s.mu.Unlock()
 
-	log.Printf("Refreshed category to ID map with %d categories", len(categoryIdToCategoryMap))
+	logger.Debug("Refreshed category to ID map", zap.Int("category_count", len(categoryIdToCategoryMap)))
 	return nil
 }

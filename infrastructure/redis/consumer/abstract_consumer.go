@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"pomocore-data/shared/common/logger"
 )
 
 type StreamConfig struct {
@@ -70,15 +72,17 @@ func (c *AbstractConsumer) Start() error {
 	c.wg.Add(1)
 	go c.consume(batchChan)
 
-	log.Printf("Consumer started for stream %s with %d workers", c.config.StreamKey, c.workerPool)
+	logger.Info("Consumer started",
+		zap.String("stream", c.config.StreamKey),
+		zap.Int("workers", c.workerPool))
 	return nil
 }
 
 func (c *AbstractConsumer) Stop() {
-	log.Printf("Stopping consumer for stream %s...", c.config.StreamKey)
+	logger.Info("Stopping consumer", zap.String("stream", c.config.StreamKey))
 	c.cancel()
 	c.wg.Wait()
-	log.Printf("Consumer for stream %s stopped", c.config.StreamKey)
+	logger.Info("Consumer stopped", zap.String("stream", c.config.StreamKey))
 }
 
 func (c *AbstractConsumer) createConsumerGroup() error {
@@ -116,7 +120,9 @@ func (c *AbstractConsumer) consume(batchChan chan<- []redis.XMessage) {
 				if errors.Is(err, redis.Nil) {
 					continue
 				}
-				log.Printf("Error reading from stream %s: %v", c.config.StreamKey, err)
+				logger.Error("Error reading from stream",
+					zap.String("stream", c.config.StreamKey),
+					logger.WithError(err))
 				time.Sleep(3 * time.Second)
 				continue
 			}
@@ -129,7 +135,7 @@ func (c *AbstractConsumer) consume(batchChan chan<- []redis.XMessage) {
 			if len(allMessages) > 0 {
 				select {
 				case batchChan <- allMessages:
-					log.Printf("Sent batch of %d messages to workers", len(allMessages))
+					logger.Debug("Sent batch to workers", zap.Int("batch_size", len(allMessages)))
 				case <-c.ctx.Done():
 					return
 				}
@@ -140,19 +146,25 @@ func (c *AbstractConsumer) consume(batchChan chan<- []redis.XMessage) {
 
 func (c *AbstractConsumer) batchWorker(workerID int, batchChan <-chan []redis.XMessage) {
 	defer c.wg.Done()
-	log.Printf("Worker %d started for stream %s", workerID, c.config.StreamKey)
+	logger.Debug("Worker started",
+		zap.Int("worker_id", workerID),
+		zap.String("stream", c.config.StreamKey))
 
 	for {
 		select {
 		case <-c.ctx.Done():
-			log.Printf("Worker %d stopping for stream %s", workerID, c.config.StreamKey)
+			logger.Debug("Worker stopping",
+				zap.Int("worker_id", workerID),
+				zap.String("stream", c.config.StreamKey))
 			return
 		case batch, ok := <-batchChan:
 			if !ok {
-				log.Printf("Worker %d: batch channel closed", workerID)
+				logger.Debug("Batch channel closed", zap.Int("worker_id", workerID))
 				return
 			}
-			log.Printf("Worker %d processing batch of %d messages", workerID, len(batch))
+			logger.Debug("Worker processing batch",
+				zap.Int("worker_id", workerID),
+				zap.Int("batch_size", len(batch)))
 			c.processBatch(batch)
 		}
 	}
@@ -165,7 +177,7 @@ func (c *AbstractConsumer) processBatch(messages []redis.XMessage) {
 
 	err := c.processor.ProcessBatch(c.ctx, messages)
 	if err != nil {
-		log.Printf("Error processing batch: %v", err)
+		logger.Error("Error processing batch", logger.WithError(err))
 	}
 
 	for _, msg := range messages {
@@ -180,6 +192,8 @@ func (c *AbstractConsumer) acknowledgeMessage(messageID string) {
 		c.config.Group,
 		messageID,
 	).Err(); err != nil {
-		log.Printf("Error acknowledging message %s: %v", messageID, err)
+		logger.Error("Error acknowledging message",
+			zap.String("message_id", messageID),
+			logger.WithError(err))
 	}
 }

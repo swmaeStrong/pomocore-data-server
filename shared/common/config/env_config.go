@@ -1,16 +1,17 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
-	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func LoadEnv() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Warning: .env file not found or could not be loaded: %v", err)
+		// Logger may not be initialized yet, so use fmt for now
+		// logger.Warn(".env file not found or could not be loaded", logger.WithError(err))
 	}
 }
 
