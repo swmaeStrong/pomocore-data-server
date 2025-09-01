@@ -111,7 +111,7 @@ func (c *AbstractConsumer) consume(batchChan chan<- []redis.XMessage) {
 			messages, err := c.client.XReadGroup(c.ctx, &redis.XReadGroupArgs{
 				Group:    c.config.Group,
 				Consumer: c.config.Consumer,
-				Streams:  []string{c.config.StreamKey, "0"},
+				Streams:  []string{c.config.StreamKey, ">"},
 				Count:    int64(c.batchSize),
 				Block:    c.blockTime,
 			}).Result()
