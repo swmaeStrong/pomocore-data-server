@@ -34,6 +34,12 @@ func main() {
 	}
 	defer logger.Sync()
 
+	loc, err := time.LoadLocation("Asia/Seoul")
+	if err != nil {
+		logger.Fatal("Failed to load timezone", logger.WithError(err))
+	}
+	time.Local = loc
+
 	// Initialize MongoDB
 	mongoClient, err := mongoConfig.ConnectMongoDB()
 	if err != nil {
