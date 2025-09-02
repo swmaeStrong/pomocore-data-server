@@ -88,23 +88,25 @@ func (l *LLMClient) buildSystemPrompt() string {
 
 func (l *LLMClient) validateCategory(category string) string {
 	validCategories := map[string]bool{
-		"SNS":                   true,
+		"Marketing":             true,
+		"Browsing":              true,
+		"E-commerce & Shopping": true,
+		"AFK":                   true,
+		"Uncategorized":         true,
+		"Development":           true,
+		"LLM":                   true,
 		"Documentation":         true,
 		"Design":                true,
-		"Communication":         true,
-		"LLM":                   true,
-		"Development":           true,
-		"Productivity":          true,
 		"Video Editing":         true,
+		"Meetings":              true,
+		"SNS":                   true,
 		"Entertainment":         true,
+		"Productivity":          true,
 		"File Management":       true,
 		"System & Utilities":    true,
 		"Game":                  true,
 		"Education":             true,
 		"Finance":               true,
-		"Browsing":              true,
-		"Marketing":             true,
-		"E-commerce & Shopping": true,
 	}
 
 	if validCategories[category] {
