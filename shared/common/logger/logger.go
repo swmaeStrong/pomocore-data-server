@@ -43,11 +43,10 @@ func InitLogger(serviceName, environment string) error {
 		"env":     environment,
 	}
 
-	logger, err := config.Build(zap.AddCaller())
+	logger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		return err
 	}
-
 	Logger = logger
 	return nil
 }
