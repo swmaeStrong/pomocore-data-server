@@ -94,7 +94,7 @@ func (a *PomodoroMessageProcessorAdapter) publishSessionScoreEvents(ctx context.
 
 		logger.Info("Classification Commited",
 			zap.String("user_id", sessionScoreMsg.UserID),
-			zap.Time("session_date", sessionScoreMsg.SessionDate),
+			zap.String("session_date", sessionScoreMsg.SessionDate.Format("2006-01-02")),
 			zap.Int("session", sessionScoreMsg.Session))
 
 		endedKey := a.getSessionStateKey(sessionScoreMsg.UserID, sessionScoreMsg.SessionDate, sessionScoreMsg.Session)
