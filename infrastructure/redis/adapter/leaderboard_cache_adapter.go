@@ -26,8 +26,11 @@ func (a *LeaderboardCacheAdapter) BatchIncreaseScore(ctx context.Context, entrie
 	keyScores := make(map[string][]redis.Z)
 
 	for _, entry := range entries {
+		keys := entry.GetCategoryLeaderboardKeys()
+		if entry.IsWorkCategory() {
+			keys = append(keys, entry.GetWorkLeaderboardKeys()...)
+		}
 
-		keys := entry.GetLeaderboardKeys()
 		for _, key := range keys {
 			if keyScores[key] == nil {
 				keyScores[key] = make([]redis.Z, 0)
@@ -38,7 +41,6 @@ func (a *LeaderboardCacheAdapter) BatchIncreaseScore(ctx context.Context, entrie
 				Member: entry.UserID,
 			})
 		}
-
 	}
 
 	for key, scores := range keyScores {

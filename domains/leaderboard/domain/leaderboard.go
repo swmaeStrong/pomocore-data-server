@@ -31,20 +31,6 @@ func NewLeaderboardEntry(userID, category string, duration, timestamp float64) *
 
 var keyFormat = "leaderboard:%s:%s"
 
-func (e *LeaderboardEntry) GetLeaderboardKey(periodType string) string {
-	day := time.Unix(int64(e.Timestamp), 0)
-	switch periodType {
-	case "daily":
-		return getDailyLeaderboardKey(e.Category, day)
-	case "weekly":
-		return getWeeklyLeaderboardKey(e.Category, day)
-	case "monthly":
-		return getMonthlyLeaderboardKey(e.Category, day)
-	default:
-		return getDailyLeaderboardKey(e.Category, day)
-	}
-}
-
 func getDailyLeaderboardKey(category string, day time.Time) string {
 	dateStr := day.Format("2006-01-02")
 	return fmt.Sprintf(keyFormat, category, dateStr)
@@ -63,7 +49,7 @@ func getMonthlyLeaderboardKey(category string, day time.Time) string {
 	return fmt.Sprintf(keyFormat, category, monthStr)
 }
 
-func (e *LeaderboardEntry) getWorkLeaderboardKeys() []string {
+func (e *LeaderboardEntry) GetWorkLeaderboardKeys() []string {
 	res := make([]string, 3)
 	day := time.Unix(int64(e.Timestamp), 0)
 	res[0] = getDailyLeaderboardKey("work", day)
@@ -72,7 +58,7 @@ func (e *LeaderboardEntry) getWorkLeaderboardKeys() []string {
 	return res
 }
 
-func (e *LeaderboardEntry) getCategoryLeaderboardKeys() []string {
+func (e *LeaderboardEntry) GetCategoryLeaderboardKeys() []string {
 	res := make([]string, 3)
 	day := time.Unix(int64(e.Timestamp), 0)
 	res[0] = getDailyLeaderboardKey(e.Category, day)
@@ -81,8 +67,20 @@ func (e *LeaderboardEntry) getCategoryLeaderboardKeys() []string {
 	return res
 }
 
-func (e *LeaderboardEntry) GetLeaderboardKeys() []string {
-	keys := e.getWorkLeaderboardKeys()
-	keys = append(keys, e.getCategoryLeaderboardKeys()...)
-	return keys
+func (e *LeaderboardEntry) IsWorkCategory() bool {
+	workCategory := make(map[string]bool)
+	workCategory["Development"] = true
+	workCategory["LLM"] = true
+	workCategory["Documentation"] = true
+	workCategory["Design"] = true
+	workCategory["Video Editing"] = true
+	workCategory["Education"] = true
+	workCategory["Productivity"] = true
+	workCategory["Finance"] = true
+	workCategory["File Management"] = true
+	workCategory["Browsing"] = true
+	workCategory["Marketing"] = true
+	workCategory["System & Utilities"] = true
+	workCategory["Meetings"] = true
+	return workCategory[e.Category] == true
 }
