@@ -3,8 +3,6 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
@@ -96,17 +94,7 @@ func (a *PomodoroMessageProcessorAdapter) publishSessionScoreEvents(ctx context.
 			zap.String("user_id", sessionScoreMsg.UserID),
 			zap.String("session_date", sessionScoreMsg.SessionDate.Format("2006-01-02")),
 			zap.Int("session", sessionScoreMsg.Session))
-
-		endedKey := a.getSessionStateKey(sessionScoreMsg.UserID, sessionScoreMsg.SessionDate, sessionScoreMsg.Session)
-		if err := a.redisClient.Set(ctx, endedKey, "true", 10*time.Minute).Err(); err != nil {
-			logger.Error("Error setting ended session key", zap.String("key", endedKey), logger.WithError(err))
-		}
 	}
 
 	return nil
-}
-
-func (a *PomodoroMessageProcessorAdapter) getSessionStateKey(userID string, day time.Time, session int) string {
-	dateStr := day.Format("2006-01-02")
-	return fmt.Sprintf("session:processed:%s:%s:%d", userID, dateStr, session)
 }
