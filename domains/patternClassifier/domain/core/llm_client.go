@@ -38,20 +38,31 @@ func (l *LLMClient) ClassifyUsage(app, title, url string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), l.timeout)
 	defer cancel()
 
-	resp, err := l.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model:       openai.GPT4Dot1,
-		Temperature: 0.1,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: systemPrompt,
+	cnt := 0
+	var err error
+	var resp openai.ChatCompletionResponse
+	for cnt < 5 {
+		resp, err = l.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+			Model:       openai.GPT4Dot1,
+			Temperature: 0.1,
+			Messages: []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: systemPrompt,
+				},
+				{
+					Role:    openai.ChatMessageRoleUser,
+					Content: prompt,
+				},
 			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: prompt,
-			},
-		},
-	})
+		})
+		cnt++
+		if err == nil {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 
 	if err != nil {
 		return "", fmt.Errorf("OpenAI API error: %w", err)

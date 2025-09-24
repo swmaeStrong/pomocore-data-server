@@ -123,6 +123,7 @@ func (p *PatternClassifier) classifyFromLLM(app, title, url string) string {
 		zap.String("app", app),
 		zap.String("title", title),
 		zap.String("url", url))
+
 	category, err := p.llmClient.ClassifyUsage(app, title, url)
 	if err != nil {
 		logger.Error("LLM classification failed", logger.WithError(err))
